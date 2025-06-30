@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		98B0FF5F2DE5CC6800BE2E73 /* LaunchAtLogin in Frameworks */ = {isa = PBXBuildFile; productRef = 98B0FF5E2DE5CC6800BE2E73 /* LaunchAtLogin */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		981B7FF82DE3362300563BC2 /* Satin.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Satin.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -23,6 +27,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				98B0FF5F2DE5CC6800BE2E73 /* LaunchAtLogin in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -65,6 +70,7 @@
 			);
 			name = Satin;
 			packageProductDependencies = (
+				98B0FF5E2DE5CC6800BE2E73 /* LaunchAtLogin */,
 			);
 			productName = Satin;
 			productReference = 981B7FF82DE3362300563BC2 /* Satin.app */;
@@ -94,6 +100,9 @@
 			);
 			mainGroup = 981B7FEF2DE3362300563BC2;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				98B0FF5D2DE5CC6800BE2E73 /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 981B7FF92DE3362300563BC2 /* Products */;
 			projectDirPath = "";
@@ -321,6 +330,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		98B0FF5D2DE5CC6800BE2E73 /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sindresorhus/LaunchAtLogin-Modern";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		98B0FF5E2DE5CC6800BE2E73 /* LaunchAtLogin */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 98B0FF5D2DE5CC6800BE2E73 /* XCRemoteSwiftPackageReference "LaunchAtLogin-Modern" */;
+			productName = LaunchAtLogin;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 981B7FF02DE3362300563BC2 /* Project object */;
 }

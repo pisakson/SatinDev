@@ -9,9 +9,10 @@ import SwiftUI
 
 @main
 struct SatinApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(model: appDelegate.model)
         }
     }
 }
