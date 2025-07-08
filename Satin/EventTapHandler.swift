@@ -20,7 +20,7 @@ class EventTapHandler {
 
         let refcon = UnsafeMutableRawPointer(Unmanaged.passUnretained(model).toOpaque())
 
-        guard let eventTap = CGEvent.tapCreate(tap: .cghidEventTap,
+        guard let eventTap = CGEvent.tapCreate(tap: .cgSessionEventTap,
                                                place: .headInsertEventTap,
                                                options: .defaultTap,
                                                eventsOfInterest: eventMask,
@@ -43,16 +43,16 @@ class EventTapHandler {
         let model = Unmanaged<AppModel>.fromOpaque(refcon).takeUnretainedValue()
 
         if nsEvent.modifierFlags.contains(.function) {
-            if let shortcut = model.shortcuts.first(where: {short in nsEvent.keyCode == short.keycode}){
+            if let shortcut = model.shortcuts.first(where: { short in nsEvent.keyCode == short.keycode }) {
                 shortcut.bringToFront()
-                return nil
-            } else {
-                NSSound.beep()
                 return nil
             }
         }
 
         return Unmanaged.passRetained(event)
     }
+
 }
+
+
 

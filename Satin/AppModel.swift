@@ -15,13 +15,11 @@
 import Foundation
 import AppKit
 
-// ──────────────────────────────────────────────────────────────
-// MARK: – JSON wrapper (root object is { "keys": [ … ] })
 struct ShortcutStore: Codable {
     var keys: [ShortcutModel]
 }
 
-// ──────────────────────────────────────────────────────────────
+
 // MARK: – Model
 final class AppModel: ObservableObject {
 

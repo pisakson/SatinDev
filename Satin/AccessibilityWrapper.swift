@@ -8,7 +8,7 @@
 import Foundation
 import Cocoa
 
-class AccessibilityWrapper {
+class AccessibilityWrapper: Comparable {
     private let element: AXUIElement;
     private let processId: pid_t;
     
@@ -29,6 +29,26 @@ class AccessibilityWrapper {
             return result;
         }
         return false;
+    }
+    
+    func getAXWindowPosition() -> CGPoint? {
+        var positionValue: CFTypeRef?
+
+        let error = AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &positionValue)
+
+        guard error == .success,
+              let value = positionValue,
+              CFGetTypeID(value) == AXValueGetTypeID(),
+              AXValueGetType(value as! AXValue) == .cgPoint else {
+            return nil
+        }
+
+        var point = CGPoint.zero
+        if AXValueGetValue(value as! AXValue, .cgPoint, &point) {
+            return point
+        }
+
+        return nil
     }
     
     func isMinimized() -> Bool {
@@ -63,18 +83,46 @@ class AccessibilityWrapper {
         return false
     }
     
-    func raiseWindow() {
-        let result = AXUIElementPerformAction(element, kAXRaiseAction as CFString)
-        if result != .success {
+    func focus() {
+        if let app = NSRunningApplication(processIdentifier: self.processId) {
+            app.activate()
+        } else {
             NSSound.beep()
+            return
         }
+        AXUIElementSetAttributeValue(self.element, kAXMainAttribute as CFString, kCFBooleanTrue)
+        AXUIElementSetAttributeValue(self.element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+        AXUIElementPerformAction(self.element, kAXRaiseAction as CFString)
     }
     
-    func  windowElements() -> [AccessibilityWrapper]{
+    func isMain() -> Bool{
+        return fetch(kAXAttribute: kAXMainAttribute)
+    }
+
+    
+    func windowElements() -> [AccessibilityWrapper]{
         if let elements = element.getValue(.windows) as? [AXUIElement]{
             return elements.map{element in AccessibilityWrapper(element: element, processId: processId)};
         }
         return [];
+    }
+    
+    static func < (lhs: AccessibilityWrapper, rhs: AccessibilityWrapper) -> Bool {
+        guard let lpos: CGPoint = lhs.getAXWindowPosition(),
+                let rpos: CGPoint = rhs.getAXWindowPosition()
+        else {
+            return false
+        }
+
+        if lpos.x != rpos.x {
+            return lpos.x < rpos.x
+        } else {
+            return lpos.y < rpos.y
+        }
+    }
+    
+    static func == (lhs: AccessibilityWrapper, rhs: AccessibilityWrapper) -> Bool {
+        return lhs.element == rhs.element
     }
 }
 
