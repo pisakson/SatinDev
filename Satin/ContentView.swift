@@ -15,12 +15,11 @@ struct ContentView: View {
     @ObservedObject var model: AppModel
     
     @State private var showAddSheet    = false
-    @State private var showRemoveSheet = false
+    @State private var selected: URL?
     
     var body: some View {
         VStack(spacing: 0) {
-            // ─────────── List of shortcuts ───────────
-            List(model.shortcuts) { shortcut in
+            List(model.shortcuts, id: \.shortcut, selection: $selected) { shortcut in
                 HStack(spacing: 12) {
                     Image(nsImage: icon(for: shortcut))
                         .resizable()
@@ -47,18 +46,24 @@ struct ContentView: View {
             
             HStack {
                 Button("Add Shortcut") { showAddSheet = true }
-                Button("Remove Shortcut") { showRemoveSheet = true }
+                Button("Remove Shortcut") { 
+                    if let selected = selected,
+                       let shortcut = model.shortcuts.first(where: { $0.shortcut == selected }) {
+                        model.removeShortcut(key: shortcut.key)
+                        self.selected = nil
+                    } else {
+                        NSSound.beep()
+                    }
+                }
                 Spacer()
                 Button("Cancel") { NSApplication.shared.keyWindow?.close() }
+                 .keyboardShortcut(.defaultAction)
             }
-            .padding([.horizontal, .bottom])
+            .padding(10)
         }
-        .frame(minWidth: 300, minHeight: 300)
+        .frame(minWidth: 420, minHeight: 300)
         .sheet(isPresented: $showAddSheet) {
             AddShortcutSheet(model: model)
-        }
-        .sheet(isPresented: $showRemoveSheet) {
-            RemoveShortcutSheet(model: model)
         }
     }
     
@@ -69,7 +74,6 @@ struct ContentView: View {
     }
 }
 
-// MARK: - Add Shortcut Sheet
 struct AddShortcutSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var model: AppModel
@@ -79,29 +83,43 @@ struct AddShortcutSheet: View {
     @State private var showImporter = false
     
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Add New Shortcut").font(.title2)
-            
-            HStack {
-                Text("App:")
-                if let url = selectedURL {
-                    Text(url.lastPathComponent).lineLimit(1)
-                } else {
-                    Text("None selected").foregroundStyle(.secondary)
-                }
+        VStack() {
+            HStack{
+                Text("New shortcut:").font(.title)
+                    .fontWeight(.bold)
+                    .padding([.top, .horizontal])
                 Spacer()
-                Button("Choose …") { showImporter = true }
             }
-            
-            TextField("Key (single letter)", text: $keyString)
-                .onChange(of: keyString) { newVal in
-                    // Accept only one alphabetic char
-                    keyString = String(newVal.uppercased().prefix(1).filter { $0.isLetter })
+                
+            VStack(spacing: 10){
+                HStack {
+                    Text("App:")
+                    Spacer()
+                    if let url = selectedURL {
+                        Text(url.lastPathComponent).lineLimit(1)
+                    } else {
+                        Text("None selected").foregroundStyle(.secondary)
+                    }
+                    Button("Choose app...") { showImporter = true }
                 }
-                .frame(width: 150)
+                .padding([.top, .horizontal])
+                
+                TextField("Key:", text: $keyString)
+                    .onChange(of: keyString) { newVal in
+                        keyString = String(newVal.uppercased().prefix(1).filter { $0.isLetter })
+                    }
+                    .padding([.bottom, .horizontal])
+            }
+            .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .strokeBorder(
+                            Color(nsColor: .disabledControlTextColor),
+                            lineWidth: 2
+                        )
+                )
+            .padding([.horizontal, .bottom])
             
             HStack {
-                Spacer()
                 Button("Cancel") { dismiss() }
                 Button("Add") {
                     if let url = selectedURL {
@@ -110,52 +128,36 @@ struct AddShortcutSheet: View {
                     }
                 }
                 .disabled(selectedURL == nil || keyString.isEmpty)
+                .keyboardShortcut(.defaultAction)
             }
+            
+            .padding()
         }
-        .padding(24)
+        .frame(width: 320)
         .fileImporter(isPresented: $showImporter,
                       allowedContentTypes: [UTType.application],
                       allowsMultipleSelection: false) { result in
             if case .success(let urls) = result { selectedURL = urls.first }
         }
-        .frame(width: 420)
+    }
+        
+        
+}
+
+class ContentViewController:NSWindowController {
+    convenience init(model: AppModel) {
+        let contentView = ContentView(model: model)
+        let hostingController = NSHostingController(rootView: contentView)
+        let window = NSWindow(contentViewController: hostingController)
+        self.init(window: window)
+        window.title = NSLocalizedString("Satin", comment: "Fönstertitel")
+        window.styleMask = [.titled, .closable]
     }
 }
 
-// MARK: - Remove Shortcut Sheet
-struct RemoveShortcutSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @ObservedObject var model: AppModel
-    
-    @State private var selectedKey: String?
-    
-    var body: some View {
-        VStack(spacing: 20) {
-            Text("Remove Shortcut").font(.title2)
-            
-            Picker("Shortcut Key", selection: $selectedKey) {
-                ForEach(model.shortcuts) { shortcut in
-                    Text(shortcut.key).tag(Optional(shortcut.key))
-                }
-            }
-            .pickerStyle(.radioGroup)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            
-            HStack {
-                Spacer()
-                Button("Cancel") { dismiss() }
-                Button("Remove") {
-                    if let key = selectedKey { model.removeShortcut(key: key); dismiss() }
-                }
-                .disabled(selectedKey == nil)
-            }
-        }
-        .padding(24)
-        .frame(width: 320)
-    }
-}
 
 // MARK: - Preview
 #Preview {
     ContentView(model: AppModel())
 }
+

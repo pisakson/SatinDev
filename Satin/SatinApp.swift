@@ -11,8 +11,8 @@ import SwiftUI
 struct SatinApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     var body: some Scene {
-        WindowGroup {
-            ContentView(model: appDelegate.model)
+        Settings{
+            EmptyView()
         }
     }
 }

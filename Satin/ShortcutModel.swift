@@ -9,7 +9,7 @@ import Foundation
 import AppKit
 import CoreServices
 
-class ShortcutModel: Encodable, Decodable, Identifiable {
+class ShortcutModel: Encodable, Decodable, Identifiable, Equatable {
     let shortcut: URL
     let key: String
     let keycode: UInt16
@@ -81,7 +81,6 @@ class ShortcutModel: Encodable, Decodable, Identifiable {
         }
         
         guard let pid = processID() else {
-            NSSound.beep()
             return
         }
 
