@@ -84,15 +84,21 @@ class AccessibilityWrapper: Comparable {
     }
     
     func focus() {
-        if let app = NSRunningApplication(processIdentifier: self.processId) {
-            app.activate()
-        } else {
+        guard let app = NSRunningApplication(processIdentifier: processId) else {
             NSSound.beep()
             return
         }
-        AXUIElementSetAttributeValue(self.element, kAXMainAttribute as CFString, kCFBooleanTrue)
-        AXUIElementSetAttributeValue(self.element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
-        AXUIElementPerformAction(self.element, kAXRaiseAction as CFString)
+        app.activate()
+
+        let mainResult  = AXUIElementSetAttributeValue(element, kAXMainAttribute as CFString, kCFBooleanTrue)
+        let focusResult = AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, kCFBooleanTrue)
+
+        guard mainResult == .success, focusResult == .success else {
+            NSSound.beep()
+            return
+        }
+
+        AXUIElementPerformAction(element, kAXRaiseAction as CFString)
     }
     
     func isMain() -> Bool{

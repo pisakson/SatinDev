@@ -15,12 +15,17 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel()
     var contentWindowController: ContentViewController?
     var preferencesWindowController: PreferencesWindowController?
-    
-    
+    var eventTapHandler: EventTapHandler?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusBar()
         NSApp.hide(nil)
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(checkTapHealth),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
     }
 
     func setupStatusBar() {
@@ -37,21 +42,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         }
-        
+
         let menu = NSMenu()
         menu.addItem(NSMenuItem(title: NSLocalizedString("Shortcuts", comment: "Statusbar item"), action: #selector(showContentWindow(_:)), keyEquivalent: "c"))
         menu.addItem(NSMenuItem(title: NSLocalizedString("Preferences", comment: "Statusbar item"), action: #selector(showPreferencesWindow(_:)), keyEquivalent: "p"))
         menu.addItem(.separator())
         menu.addItem(NSMenuItem(title: NSLocalizedString("Quit Satin", comment: "Statusbar item"), action: #selector(quit), keyEquivalent: "q"))
-        
+
         statusItem.menu = menu
-        
+
         checkIfAxOK()
 
-        let eventTapHandler = EventTapHandler(model: model)
-        eventTapHandler.startEventTap()
+        eventTapHandler = EventTapHandler(model: model)
+        eventTapHandler?.startEventTap()
     }
-    
+
     @objc func quit() {
         NSApplication.shared.terminate(self)
     }
@@ -61,31 +66,34 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let options = [checkOptPrompt: true]
         _ = AXIsProcessTrustedWithOptions(options as CFDictionary?)
     }
-    
+
+    @objc func checkTapHealth() {
+        if AXIsProcessTrusted(), eventTapHandler?.isTapEnabled() == false {
+            eventTapHandler?.startEventTap()
+        }
+    }
+
     @objc func showContentWindow(_ sender: Any?) {
         if contentWindowController == nil {
-            contentWindowController = ContentViewController(model: model
-            )
+            contentWindowController = ContentViewController(model: model)
         }
         contentWindowController?.showWindow(nil)
-        
-        if let preferencesWindow = contentWindowController?.window {
+
+        if let window = contentWindowController?.window {
             NSApp.activate(ignoringOtherApps: true)
-            preferencesWindow.makeKeyAndOrderFront(nil)
+            window.makeKeyAndOrderFront(nil)
         }
     }
-    
+
     @objc func showPreferencesWindow(_ sender: Any?) {
         if preferencesWindowController == nil {
-            preferencesWindowController = PreferencesWindowController(model: model
-            )
+            preferencesWindowController = PreferencesWindowController(model: model)
         }
         preferencesWindowController?.showWindow(nil)
-        
-        if let preferencesWindow = preferencesWindowController?.window {
+
+        if let window = preferencesWindowController?.window {
             NSApp.activate(ignoringOtherApps: true)
-            preferencesWindow.makeKeyAndOrderFront(nil)
+            window.makeKeyAndOrderFront(nil)
         }
     }
-    
 }

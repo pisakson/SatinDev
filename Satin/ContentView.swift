@@ -13,10 +13,10 @@ import UniformTypeIdentifiers
 // MARK: - Main View
 struct ContentView: View {
     @ObservedObject var model: AppModel
-    
-    @State private var showAddSheet    = false
+
+    @State private var showAddSheet = false
     @State private var selected: URL?
-    
+
     var body: some View {
         VStack(spacing: 0) {
             List(model.shortcuts, id: \.shortcut, selection: $selected) { shortcut in
@@ -26,11 +26,11 @@ struct ContentView: View {
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 32, height: 32)
                         .cornerRadius(6)
-                    
+
                     VStack(alignment: .leading) {
                         Text(shortcut.shortcut.lastPathComponent.replacingOccurrences(of: ".app", with: ""))
                             .font(.headline)
-                        Text("Shortcut command: fn + \(shortcut.key)")
+                        Text("Shortcut command: fn + \(shortcut.key)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -41,12 +41,12 @@ struct ContentView: View {
                 }
             }
             .listStyle(.inset)
-            
+
             Divider()
-            
+
             HStack {
-                Button("Add Shortcut") { showAddSheet = true }
-                Button("Remove Shortcut") { 
+                Button("Add Shortcut") { showAddSheet = true }
+                Button("Remove Shortcut") {
                     if let selected = selected,
                        let shortcut = model.shortcuts.first(where: { $0.shortcut == selected }) {
                         model.removeShortcut(key: shortcut.key)
@@ -57,7 +57,7 @@ struct ContentView: View {
                 }
                 Spacer()
                 Button("Cancel") { NSApplication.shared.keyWindow?.close() }
-                 .keyboardShortcut(.defaultAction)
+                    .keyboardShortcut(.defaultAction)
             }
             .padding(10)
         }
@@ -66,7 +66,7 @@ struct ContentView: View {
             AddShortcutSheet(model: model)
         }
     }
-    
+
     private func icon(for model: ShortcutModel) -> NSImage {
         let image = NSWorkspace.shared.icon(forFile: model.shortcut.path)
         image.size = NSSize(width: 32, height: 32)
@@ -77,48 +77,59 @@ struct ContentView: View {
 struct AddShortcutSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var model: AppModel
-    
+
     @State private var selectedURL: URL?
     @State private var keyString    = ""
     @State private var showImporter = false
-    
+
+    private var isDuplicateKey: Bool {
+        !keyString.isEmpty && model.shortcuts.contains(where: { $0.key == keyString })
+    }
+
     var body: some View {
         VStack() {
-            HStack{
-                Text("New shortcut:").font(.title)
+            HStack {
+                Text("New shortcut:").font(.title)
                     .fontWeight(.bold)
                     .padding([.top, .horizontal])
                 Spacer()
             }
-                
-            VStack(spacing: 10){
+
+            VStack(spacing: 10) {
                 HStack {
                     Text("App:")
                     Spacer()
                     if let url = selectedURL {
                         Text(url.lastPathComponent).lineLimit(1)
                     } else {
-                        Text("None selected").foregroundStyle(.secondary)
+                        Text("None selected").foregroundStyle(.secondary)
                     }
                     Button("Choose app...") { showImporter = true }
                 }
                 .padding([.top, .horizontal])
-                
-                TextField("Key:", text: $keyString)
-                    .onChange(of: keyString) { newVal in
-                        keyString = String(newVal.uppercased().prefix(1).filter { $0.isLetter })
+
+                VStack(alignment: .leading, spacing: 4) {
+                    TextField("Key:", text: $keyString)
+                        .onChange(of: keyString) { newVal in
+                            keyString = String(newVal.uppercased().prefix(1).filter { $0.isLetter })
+                        }
+                    if isDuplicateKey {
+                        Text("Key \"\(keyString)\" is already assigned.")
+                            .font(.caption)
+                            .foregroundStyle(.red)
                     }
-                    .padding([.bottom, .horizontal])
+                }
+                .padding([.bottom, .horizontal])
             }
             .background(
-                    RoundedRectangle(cornerRadius: 10)
-                        .strokeBorder(
-                            Color(nsColor: .disabledControlTextColor),
-                            lineWidth: 2
-                        )
-                )
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(
+                        Color(nsColor: .disabledControlTextColor),
+                        lineWidth: 2
+                    )
+            )
             .padding([.horizontal, .bottom])
-            
+
             HStack {
                 Button("Cancel") { dismiss() }
                 Button("Add") {
@@ -127,10 +138,9 @@ struct AddShortcutSheet: View {
                         dismiss()
                     }
                 }
-                .disabled(selectedURL == nil || keyString.isEmpty)
+                .disabled(selectedURL == nil || keyString.isEmpty || isDuplicateKey)
                 .keyboardShortcut(.defaultAction)
             }
-            
             .padding()
         }
         .frame(width: 320)
@@ -140,11 +150,9 @@ struct AddShortcutSheet: View {
             if case .success(let urls) = result { selectedURL = urls.first }
         }
     }
-        
-        
 }
 
-class ContentViewController:NSWindowController {
+class ContentViewController: NSWindowController {
     convenience init(model: AppModel) {
         let contentView = ContentView(model: model)
         let hostingController = NSHostingController(rootView: contentView)
@@ -160,4 +168,3 @@ class ContentViewController:NSWindowController {
 #Preview {
     ContentView(model: AppModel())
 }
-

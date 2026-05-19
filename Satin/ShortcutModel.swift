@@ -14,49 +14,47 @@ class ShortcutModel: Encodable, Decodable, Identifiable, Equatable {
     let key: String
     let keycode: UInt16
     let bundleIdentifier: String
-    var windows: [AccessibilityWrapper] = []
-    
+    private var cycleIndex = 0
+    private var lastWindowCount = 0
+
     init?(shortcut: URL, key: String) {
         guard let code = Keycode.get(key: key) else { return nil }
-        self.shortcut = URL(fileURLWithPath: shortcut.path, isDirectory: true)
-        self.key      = key
-        self.keycode  = code
-        self.bundleIdentifier = ((Bundle(url: self.shortcut) ?? Bundle(path: self.shortcut.path))?.bundleIdentifier)!
-
+        let url = URL(fileURLWithPath: shortcut.path, isDirectory: true)
+        guard let bundleID = (Bundle(url: url) ?? Bundle(path: url.path))?.bundleIdentifier else { return nil }
+        self.shortcut = url
+        self.key = key
+        self.keycode = code
+        self.bundleIdentifier = bundleID
     }
-    
+
     private enum CodingKeys: String, CodingKey {
-            case shortcut, key
-        }
-        
+        case shortcut, key
+    }
+
     required convenience init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        
-        let tempShortcut = try container.decode(URL.self,    forKey: .shortcut)
+        let tempShortcut = try container.decode(URL.self, forKey: .shortcut)
         let tempKey      = try container.decode(String.self, forKey: .key)
-        self.init(shortcut: tempShortcut, key: tempKey)!
+        guard let model = Self(shortcut: tempShortcut, key: tempKey) else {
+            throw DecodingError.dataCorruptedError(forKey: .shortcut, in: container,
+                debugDescription: "Could not initialise ShortcutModel from decoded values")
+        }
+        self.init(shortcut: model.shortcut, key: model.key)!
     }
-    
+
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        
         try container.encode(shortcut, forKey: .shortcut)
-        try container.encode(key,      forKey: .key)
+        try container.encode(key, forKey: .key)
     }
-    
+
     static func == (lhs: ShortcutModel, rhs: ShortcutModel) -> Bool {
         lhs.shortcut == rhs.shortcut && lhs.keycode == rhs.keycode
     }
-    
+
     func hash(into hasher: inout Hasher) {
         hasher.combine(shortcut)
         hasher.combine(keycode)
-    }
-
-    func processID() -> pid_t? {
-        guard let bundleID = Bundle(url: shortcut)?.bundleIdentifier else { return nil }
-        let runningApps = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
-        return runningApps.first?.processIdentifier
     }
 
     func windowsForPID(_ pid: pid_t) -> [AccessibilityWrapper] {
@@ -70,30 +68,26 @@ class ShortcutModel: Encodable, Decodable, Identifiable, Equatable {
     }
 
     func bringToFront() {
-        let fileManager = FileManager.default
+        guard FileManager.default.fileExists(atPath: shortcut.path) else { NSSound.beep(); return }
+
         let config = NSWorkspace.OpenConfiguration()
         config.activates = true
-        
-        if fileManager.fileExists(atPath: shortcut.path) {
-            NSWorkspace.shared.open(shortcut, configuration: config, completionHandler: nil)
-        } else {
-            NSSound.beep()
-        }
-        
-        guard let pid = processID() else {
-            return
-        }
 
-        windows = windowsForPID(pid)
-        windows.sort()
-        if windows.count > 1{
-            if let currentIndex = windows.firstIndex(where: { $0.isMain() }) {
-                let nextIndex = (currentIndex + 1) % windows.count
-                windows[nextIndex].focus()
-            } else {
-                NSSound.beep()
+        NSWorkspace.shared.open(shortcut, configuration: config) { runningApp, _ in
+            guard let app = runningApp else { return }
+            let pid = app.processIdentifier
+            let wins = self.windowsForPID(pid)
+                .filter { !$0.isMinimized() && !$0.isHidden() }
+                .sorted()
+            guard !wins.isEmpty else { return }
+
+            if wins.count != self.lastWindowCount {
+                self.cycleIndex = 0
+                self.lastWindowCount = wins.count
             }
+
+            wins[self.cycleIndex].focus()
+            self.cycleIndex = (self.cycleIndex + 1) % wins.count
         }
-        
     }
 }
